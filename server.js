@@ -30,15 +30,15 @@ app.use(cors());
 
 app.use("/api/users", userRoutes);
 app.use("/api/room/", roomRoutes);
-app.post('/api/room/:id',expressAsyncHandler(async(req,res)=>{
-  try {
-    const {roomId,isPause,progress} = req.body;
+// app.post('/api/room/:id',expressAsyncHandler(async(req,res)=>{
+//   try {
+//     const {roomId,isPause,progress} = req.body;
     
-  }catch (error){
-    console.log(error);
-    return res.status(500,"error")
-  }
-}))
+//   }catch (error){
+//     console.log(error);
+//     return res.status(500,"error")
+//   }
+// }))
 app.ws("/api/room/:id/", function (ws, req) {
   ws.on("open", function (message) {});
 
@@ -62,7 +62,7 @@ app.ws("/api/room/:id/", function (ws, req) {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(
