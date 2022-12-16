@@ -37,12 +37,15 @@ app.ws("/api/room/", function (ws, req) {
       case "changeVideo":
         changeVideo(ws, data);
         break;
+      case "getUserList":
+        getUserList(ws, data);
+        break;
     }
   });
-  ws.on('close',function(message){
-   
-    
-  })
+  ws.on("close", function (message) {
+
+    broadcastConnection(ws, { method: "removeUser" });
+  });
 });
 
 function getOwnerStatus(ws, data) {
@@ -67,12 +70,13 @@ function getOwnerStatus(ws, data) {
   ws.isPause = data.isPause;
   ws.progress = data.progress;
 
+  data.message = `Пользователь ${data.username} создал комнату ${data.roomId}`;
+  getUserList(ws, data);
+  // broadcastConnection(ws, {
+  //   ...data,
 
-  broadcastConnection(ws, {
-    ...data,
-
-    message: `Пользователь ${data.username} создал комнату ${data.roomId}`,
-  });
+  //   message: `Пользователь ${data.username} создал комнату ${data.roomId}`,
+  // });
 }
 
 function connectionHandler(ws, data) {
@@ -92,61 +96,30 @@ function connectionHandler(ws, data) {
   ws.owner = data.owner;
   ws.isPause = data.isPause;
   ws.progress = data.progress;
-  broadcastConnection(ws, {
-    ...data,
-    message: `Пользователь ${data.username} подключился к комнате`,
-  });
-}
 
-// function syncHandler(ws, data) {
-//   // const user = {
-//   //   userId: "001",
-//   //   username: "Croak-admin",
-//   //   owner:false
-//   //   roomId: roomId,
-//   //   isPause: true,
-//   //   progress: 0,
-//   // };
-//   aWss.clients.forEach((client) => {
-//     // let clientUser = JSON.parse(JSON.stringify(client));
-//     // console.log(clientUser.user)
-//     if (client.user.roomId === data.roomId) {
-//       // console.log("ws-item: ",client.user)
-//       // // синхронизация с админом
-//       if (client.user.owner == true) {
-//         data.progress = client.user.progress;
-//         data.isPause = client.user.isPause;
-//       }
-//       ws.send(
-//         JSON.stringify({
-//           ...data,
-//         })
-//       );
-//     }
-//   });
-// }
-// function changeVideo(ws, data) {
-//   // const roomOperating = {
-//   //   roomId: roomId,
-//   //   ownerId:'001',
-//   //   method: "watch",
-//   //   progress: progress,
-//   //   isPause: true/false,
-//   //   operation: isPauseClient ? "start" : "stop",
-//   //   videoSrc:"videoSrc",
-//   // };
-//   aWss.clients.forEach((client) => {
-//     let clientUser = JSON.parse(JSON.stringify(client));
-//     console.log(clientUser.user)
-//     if (clientUser.user.roomId === data.roomId) {
-//       client.send(
-//         JSON.stringify({
-//           ...data,
-//         })
-//       );
-//     }
-//   });
-// }
+  data.message = `Пользователь ${data.username} подключился к комнате`;
+  getUserList(ws, data);
+  // broadcastConnection(ws, {
+  //   ...data,
+  //   message: `Пользователь ${data.username} подключился к комнате`,
+  // });
+}
+function getUserList(ws, data) {
+  let arr = [];
+  aWss.clients.forEach((client) => {
+    // let user = JSON.parse(JSON.stringify(client.user));
+    console.log(client.username, client.owner);
+    if (client.roomId === data.roomId) {
+      arr.push({
+        userId: client.userId,
+        username: client.username,
+      });
+    }
+  });
+  console.log(arr);
+  data.userList = JSON.parse(JSON.stringify(arr));
+  broadcastConnection(ws, data);
+}
 function broadcastConnection(ws, data) {
   // const user = {
   //   userId: "001",
@@ -166,7 +139,7 @@ function broadcastConnection(ws, data) {
   //   operation: isPauseClient ? "start" : "stop",
   //   videoSrc:"videoSrc",
   // };
-  console.log(aWss.clients.size)
+  console.log(aWss.clients.size);
   aWss.clients.forEach((client) => {
     // let user = JSON.parse(JSON.stringify(client.user));
     console.log(client.username, client.owner);
