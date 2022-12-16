@@ -5,49 +5,26 @@ import morgan from "morgan";
 import colors from "colors";
 import enableWs from "express-ws";
 
-// dataBase config
-import { connectDB } from "./config/dataBase.js";
-
-// routes
-import userRoutes from "./routes/userRoutes.js";
-import roomRoutes from "./routes/roomRoutes.js";
-import expressAsyncHandler from "express-async-handler";
-
 dotenv.config();
-
-connectDB();
 
 const app = express();
 const WSServer = enableWs(app);
 const aWss = WSServer.getWss();
 
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-
 app.use(express.json());
 app.use(cors());
 
-app.use("/api/users", userRoutes);
-app.use("/api/room/", roomRoutes);
-// app.post('/api/room/:id',expressAsyncHandler(async(req,res)=>{
-//   try {
-//     const {roomId,isPause,progress} = req.body;
-    
-//   }catch (error){
-//     console.log(error);
-//     return res.status(500,"error")
-//   }
-// }))
-app.ws("/api/room/:id/", function (ws, req) {
+app.ws("/api/room/", function (ws, req) {
   ws.on("open", function (message) {});
 
   ws.on("message", function (message) {
-    // console.log(message);
+    // console.log("client message: ", message);
     const data = JSON.parse(message);
-    const ownerData ={};
-    
+
     switch (data.method) {
+      case "create":
+        getOwnerStatus(ws, data);
+        break;
       case "connection":
         connectionHandler(ws, data);
         break;
@@ -55,55 +32,163 @@ app.ws("/api/room/:id/", function (ws, req) {
         broadcastConnection(ws, data);
         break;
       case "sync":
-        syncHandler(ws,data);
+        syncHandler(ws, data);
         break;
-  
+      case "changeVideo":
+        changeVideo(ws, data);
+        break;
     }
   });
+  ws.on('close',function(message){
+   
+    
+  })
 });
 
-const PORT = process.env.PORT || 3000;
+function getOwnerStatus(ws, data) {
+  // const data = {
+  //   userId: "001",
+  //   username: "Croak-admin",
+  //   roomId: roomId,
+  //   isPause: true,
+  //   progress: 0,
+  // };
 
-app.listen(PORT, () => {
-  console.log(
-    `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
-  );
-});
+  // начальная настрока комнаты
 
-function connectionHandler(ws, data) {
+  data.progress = 0;
+  data.isPause = true;
+  data.owner = true;
+  // ws.user = JSON.parse(JSON.stringify(data));
+  ws.userId = data.userId;
+  ws.username = data.username;
   ws.roomId = data.roomId;
   ws.owner = data.owner;
-  ws.id = data.id;
+  ws.isPause = data.isPause;
+  ws.progress = data.progress;
 
-  broadcastConnection(ws, data);
+
+  broadcastConnection(ws, {
+    ...data,
+
+    message: `Пользователь ${data.username} создал комнату ${data.roomId}`,
+  });
 }
 
+function connectionHandler(ws, data) {
+  // const data = {
+  //   userId: "001",
+  //   username: "Croak-admin",
+  //   roomId: roomId,
+  //   isPause: true,
+  //   progress: 0,
+  // };
 
+  data.owner = false;
+  // ws.user = JSON.parse(JSON.stringify(data));
+  ws.userId = data.userId;
+  ws.username = data.username;
+  ws.roomId = data.roomId;
+  ws.owner = data.owner;
+  ws.isPause = data.isPause;
+  ws.progress = data.progress;
+  broadcastConnection(ws, {
+    ...data,
+    message: `Пользователь ${data.username} подключился к комнате`,
+  });
+}
+
+// function syncHandler(ws, data) {
+//   // const user = {
+//   //   userId: "001",
+//   //   username: "Croak-admin",
+//   //   owner:false
+//   //   roomId: roomId,
+//   //   isPause: true,
+//   //   progress: 0,
+//   // };
+//   aWss.clients.forEach((client) => {
+//     // let clientUser = JSON.parse(JSON.stringify(client));
+//     // console.log(clientUser.user)
+//     if (client.user.roomId === data.roomId) {
+//       // console.log("ws-item: ",client.user)
+//       // // синхронизация с админом
+//       if (client.user.owner == true) {
+//         data.progress = client.user.progress;
+//         data.isPause = client.user.isPause;
+//       }
+//       ws.send(
+//         JSON.stringify({
+//           ...data,
+//         })
+//       );
+//     }
+//   });
+// }
+// function changeVideo(ws, data) {
+//   // const roomOperating = {
+//   //   roomId: roomId,
+//   //   ownerId:'001',
+//   //   method: "watch",
+//   //   progress: progress,
+//   //   isPause: true/false,
+//   //   operation: isPauseClient ? "start" : "stop",
+//   //   videoSrc:"videoSrc",
+//   // };
+//   aWss.clients.forEach((client) => {
+//     let clientUser = JSON.parse(JSON.stringify(client));
+//     console.log(clientUser.user)
+//     if (clientUser.user.roomId === data.roomId) {
+//       client.send(
+//         JSON.stringify({
+//           ...data,
+//         })
+//       );
+//     }
+//   });
+// }
 function broadcastConnection(ws, data) {
+  // const user = {
+  //   userId: "001",
+  //   username: "Croak",
+  //   owner:true/false
+  //   roomId: roomId,
+  //   isPause: true,
+  //   progress: 0,
+  // };
+
+  // const roomOperating = {
+  //   roomId: roomId,
+  //   ownerId:'001',
+  //   method: "watch",
+  //   progress: progress,
+  //   isPause: true/false,
+  //   operation: isPauseClient ? "start" : "stop",
+  //   videoSrc:"videoSrc",
+  // };
+  console.log(aWss.clients.size)
   aWss.clients.forEach((client) => {
+    // let user = JSON.parse(JSON.stringify(client.user));
+    console.log(client.username, client.owner);
     if (client.roomId === data.roomId) {
-      // if (data.owner ==true) {
-      //   ws.isPause = data.isPause;
-      //   ws.progress = data.progress
+      // console.log("ws-item: ",client.user)
+      // // синхронизация с админом
+      // if (client.user.owner == true) {
+      //   data.progress = client.user.progress;
+      //   data.isPause = client.user.isPause;
       // }
-      if (data.ownerId ==client.id && client.owner == true){
-        console.log(client)
-        // ws.isPause = client.isPause;
-        // ws.progress = client.progress
-        // data.isPause = client.isPause;
-        // data.progress = client.progress;
-      }
-      // if(client.owner ==true){
-      //   data.isPause = client.isPause;
-      //   data.progress = client.progress;
-      // }
- 
+
       client.send(
         JSON.stringify({
           ...data,
-          message: `Пользователь ${data.username} подключился к комнате`,
         })
       );
     }
   });
 }
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`.yellow.bold);
+});
