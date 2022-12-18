@@ -120,6 +120,30 @@ function getUserList(ws, data) {
   data.userList = JSON.parse(JSON.stringify(arr));
   broadcastConnection(ws, data);
 }
+function syncHandler(ws,data){
+  aWss.clients.forEach((client) => {
+    // let user = JSON.parse(JSON.stringify(client.user));
+    console.log(client.username, client.owner);
+    if (client.roomId === data.roomId) {
+      if (client.userId === data.syncId){
+        let operation ="start"
+        if (data.isPause){
+            operation="stop"
+        }
+        client.send(
+      
+          JSON.stringify({
+            ...data,
+            method:'watch',
+            operation:operation
+            
+          })
+        );
+      }
+      
+    }
+  });
+}
 function broadcastConnection(ws, data) {
   // const user = {
   //   userId: "001",
@@ -144,6 +168,15 @@ function broadcastConnection(ws, data) {
     // let user = JSON.parse(JSON.stringify(client.user));
     console.log(client.username, client.owner);
     if (client.roomId === data.roomId) {
+      if (data.method=="connection"){
+        if (client.owner){
+          client.send(JSON.stringify({
+            syncId:data.userId,
+            method:"sync"
+          }))
+        }
+      }
+    
       // console.log("ws-item: ",client.user)
       // // синхронизация с админом
       // if (client.user.owner == true) {
