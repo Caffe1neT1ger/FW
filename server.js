@@ -4,11 +4,20 @@ import cors from "cors";
 import morgan from "morgan";
 import colors from "colors";
 import enableWs from "express-ws";
+import https from 'https'
+import fs from 'fs';
+
 
 dotenv.config();
 
+
+const serverOptions = {
+  // key: fs.readFileSync('key.pem'),
+  // cert: fs.readFileSync('cert.pem'),
+}
 const app = express();
-const WSServer = enableWs(app);
+const server = https.createServer(serverOptions, app)
+const WSServer = enableWs(app,server);
 const aWss = WSServer.getWss();
 
 app.use(express.json());
@@ -195,6 +204,7 @@ function broadcastConnection(ws, data) {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`.yellow.bold);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`.yellow.bold);
+// });
+server.listen(PORT);
