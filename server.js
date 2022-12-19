@@ -71,6 +71,7 @@ function getOwnerStatus(ws, data) {
   ws.owner = data.owner;
   ws.isPause = data.isPause;
   ws.progress = data.progress;
+  ws.videoSrc = data.videoSrc;
 
   data.message = `Пользователь ${data.username} создал комнату ${data.roomId}`;
   getUserList(ws, data);
@@ -172,10 +173,7 @@ function broadcastConnection(ws, data) {
     if (client.roomId === data.roomId) {
       if (data.method=="connection"){
         if (client.owner){
-          client.send(JSON.stringify({
-            syncId:data.userId,
-            method:"sync"
-          }))
+          data.videoSrc = client.videoSrc
         }
       }
     
